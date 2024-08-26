@@ -98,9 +98,7 @@
   }
 }
 @media (max-width: 992px) {
-  .slider_section {
-    margin-top: 60px; /* Adjust the margin-top value as needed */
-  }
+ 
 
   .custom_nav-container {
     margin-bottom: 60px; /* Adjust the margin-bottom value as needed */
