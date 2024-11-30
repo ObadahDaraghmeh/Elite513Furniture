@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Assistant Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            display: flex;
+            width: 90%;
+            max-width: 1200px;
+            margin: 30px auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .history, .main-section, .item-list {
+            padding: 20px;
+        }
+        .history {
+            flex: 1;
+            border-right: 1px solid #ddd;
+        }
+        .main-section {
+            flex: 2;
+        }
+        .item-list {
+            flex: 1;
+            border-left: 1px solid #ddd;
+        }
+        h1, h2, h3 {
+            text-align: center;
+            color: #333;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="number"], button, select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .item-list ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        .item-list li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #fafafa;
+        }
+        .item-list button {
+            background-color: #e74c3c;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        .item-list button:hover {
+            background-color: #c0392b;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+            border: 1px solid #ccc;
+        }
+        .history-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        .history-list li {
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #fafafa;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- History Section -->
+        <div class="history">
+            <h2>History</h2>
+            <ul id="history-list" class="history-list">
+                <!-- History items will appear here -->
+            </ul>
+            <button onclick="clearHistory()">Clear History</button>
+        </div>
+
+        <!-- Main Section -->
+        <div class="main-section">
+            <h1>Sales Assistant Tool</h1>
+            
+            <!-- Add Item Section -->
+            <div id="item-section">
+                <label for="item-description">Item Description:</label>
+                <input type="text" id="item-description" placeholder="Enter item description">
+                
+                <label for="item-price">Enter Item Price ($):</label>
+                <input type="number" id="item-price" placeholder="Enter item price" step="0.01">
+                
+                <button onclick="addItem()">Add Item</button>
+            </div>
+
+            <!-- Delivery Section -->
+            <div id="delivery-section">
+                <label for="delivery">Do you want delivery?</label>
+                <select id="delivery" onchange="toggleDelivery()">
+                    <option value="no">No</option>
+                    <option value="yes">Yes</option>
+                </select>
+                <div id="zip-code-section" class="hidden">
+                    <label for="zip-code">Enter ZIP Code:</label>
+                    <input type="text" id="zip-code" placeholder="Enter ZIP code">
+                </div>
+            </div>
+
+            <!-- Calculate Total Section -->
+            <button onclick="calculateTotal()">Calculate Total</button>
+
+            <!-- Result Section -->
+            <div id="result" class="result hidden">
+                <h3>Calculation Results</h3>
+                <p><strong>Items Total:</strong> $<span id="items-total">0.00</span></p>
+                <p><strong>Tax (8%):</strong> $<span id="tax">0.00</span></p>
+                <p><strong>Delivery Charge:</strong> $<span id="delivery-charge">0.00</span></p>
+                <p><strong>Grand Total:</strong> $<span id="grand-total">0.00</span></p>
+            </div>
+        </div>
+
+        <!-- Item List Section -->
+        <div class="item-list">
+            <h3>Items</h3>
+            <ul id="item-list">
+                <!-- Items will be dynamically added here -->
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const zipCharges = {
+            '41011': 89, '41014': 89, '41015': 89, '41016': 110, '41017': 110,
+            '41071': 89, '41073': 89, '41074': 110, '41075': 110, '41076': 110,
+            '41018': 110, '41042': 125, '41048': 125, '41059': 125, '41091': 125,
+            '45001': 89, '45002': 110, '45013': 110, '45014': 110, '45030': 125
+        };
+
+        let items = [];
+        const history = [];
+
+        function addItem() {
+            const itemDescription = document.getElementById('item-description').value.trim();
+            const itemPrice = parseFloat(document.getElementById('item-price').value);
+
+            if (!itemDescription) {
+                alert('Please enter a description.');
+                return;
+            }
+
+            if (isNaN(itemPrice) || itemPrice <= 0) {
+                alert('Please enter a valid item price.');
+                return;
+            }
+
+            const item = { description: itemDescription, price: itemPrice };
+            items.push(item);
+
+            // Add to item list
+            const itemList = document.getElementById('item-list');
+            const listItem = document.createElement('li');
+            listItem.innerHTML = `
+                <span>${item.description} - $${item.price.toFixed(2)}</span>
+                <button onclick="removeItem(${items.length - 1})">Remove</button>
+            `;
+            itemList.appendChild(listItem);
+
+            document.getElementById('item-description').value = '';
+            document.getElementById('item-price').value = '';
+        }
+
+        function removeItem(index) {
+            items.splice(index, 1);
+            const itemList = document.getElementById('item-list');
+            itemList.innerHTML = '';
+            items.forEach((item, idx) => {
+                const listItem = document.createElement('li');
+                listItem.innerHTML = `
+                    <span>${item.description} - $${item.price.toFixed(2)}</span>
+                    <button onclick="removeItem(${idx})">Remove</button>
+                `;
+                itemList.appendChild(listItem);
+            });
+        }
+
+        function toggleDelivery() {
+            const delivery = document.getElementById('delivery').value;
+            const zipCodeSection = document.getElementById('zip-code-section');
+            zipCodeSection.classList.toggle('hidden', delivery !== 'yes');
+        }
+
+        function calculateTotal() {
+            const itemsTotal = items.reduce((sum, item) => sum + item.price, 0);
+            const tax = itemsTotal * 0.08;
+            let deliveryCharge = 0;
+
+            if (document.getElementById('delivery').value === 'yes') {
+                const zipCode = document.getElementById('zip-code').value.trim();
+                deliveryCharge = zipCharges[zipCode] || 0;
+
+                if (!zipCharges[zipCode]) {
+                    alert('ZIP Code not found. Delivery charge set to $0.');
+                }
+            }
+
+            const grandTotal = itemsTotal + tax + deliveryCharge;
+
+            document.getElementById('items-total').textContent = itemsTotal.toFixed(2);
+            document.getElementById('tax').textContent = tax.toFixed(2);
+            document.getElementById('delivery-charge').textContent = deliveryCharge.toFixed(2);
+            document.getElementById('grand-total').textContent = grandTotal.toFixed(2);
+            document.getElementById('result').classList.remove('hidden');
+
+            // Save to history
+            saveToHistory(itemsTotal, tax, deliveryCharge, grandTotal);
+        }
+
+        function saveToHistory(itemsTotal, tax, deliveryCharge, grandTotal) {
+            const entry = `Items Total: $${itemsTotal.toFixed(2)}, Tax: $${tax.toFixed(2)}, Delivery Charge: $${deliveryCharge.toFixed(2)}, Grand Total: $${grandTotal.toFixed(2)}`;
+            history.push(entry);
+
+            const historyList = document.getElementById('history-list');
+            const listItem = document.createElement('li');
+            listItem.textContent = entry;
+            historyList.appendChild(listItem);
+        }
+
+        function clearHistory() {
+            document.getElementById('history-list').innerHTML = '';
+        }
+    </script>
+
+</body>
+</html>
